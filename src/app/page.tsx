@@ -49,7 +49,7 @@ export default function Example() {
   };
 
   const [chatLog, setChatLog] = useState<any>([{ role: "system", content: "You are a sarcastic helpful assistant for a scientific researcher." }]);
-  const openai = new OpenAI({apiKey: "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", dangerouslyAllowBrowser: true});
+  const openai = new OpenAI({apiKey: process.env.NEXT_PUBLIC_GPT_KEY, dangerouslyAllowBrowser: true});
 
   async function setup() {
     const completion = await openai.chat.completions.create({
