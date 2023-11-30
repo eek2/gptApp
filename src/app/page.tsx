@@ -2,25 +2,15 @@
 import { Fragment, useState, useEffect } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import {
-  Bars3Icon,
-  BellIcon,
-  CalendarIcon,
-  ChartPieIcon,
-  Cog6ToothIcon,
   DocumentDuplicateIcon,
-  FolderIcon,
   HomeIcon,
-  UsersIcon,
-  XMarkIcon,
+  Cog6ToothIcon,
+  Bars3Icon,
+  ChevronDownIcon,
+  BellIcon
 } from '@heroicons/react/24/outline'
-import { ChevronDownIcon} from '@heroicons/react/20/solid'
 import OpenAI from "openai";
 
-const navigation = [
-  { name: 'Dashboard', href: '#', icon: HomeIcon, current: true },
-  { name: 'Projects', href: '#', icon: FolderIcon, current: false },
-  { name: 'Documents', href: '#', icon: DocumentDuplicateIcon, current: false },
-]
 const userNavigation = [
   { name: 'Your profile', href: '#' },
   { name: 'Sign out', href: '#' },
@@ -34,43 +24,66 @@ function classNames(...classes: any) {
 
 export default function Example() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [items, updateItems] = useState([{text: "Waiting on assistant"}]);
+  const [items, updateItems] = useState([{ text: "Waiting on assistant" }]);
 
+  const [selectedTab, updateTab] = useState(true);
 
-  function handleSend() {
-    updateItems([...items, { text: "User: " + message }])
-    sendMessage(message, [...items])
+  const navigation = [
+    { name: 'Dashboard', href: '#', icon: HomeIcon, current: false, onclick: changeToDash },
+    { name: 'Documents', href: '#', icon: DocumentDuplicateIcon, current: false, onclick: changeToDoc },
+  ]
+
+  function changeToDash() {
+    updateTab(true);
+  }
+
+  function changeToDoc() {
+    updateTab(false);
+  }
+
+  async function handleSend() {
+
+    if (selectedTab) {
+      updateItems([...items, { text: "User: " + message }])
+      sendMessage(message, [...items])
+    } else {
+      const response = await fetch("http://localhost:3000/api/scholar?query=" + message)
+      const jsonResposne = await response.json()
+      setArticles(jsonResposne.results);
+    }
+
     setMessage("");
   }
   const [message, setMessage] = useState('');
+  const [articleList, setArticles] = useState<any>([]);
 
   const handleMessageChange = (event: any) => {
     setMessage(event.target.value);
   };
 
   const [chatLog, setChatLog] = useState<any>([{ role: "system", content: "You are a sarcastic helpful assistant for a scientific researcher." }]);
-  const openai = new OpenAI({apiKey: process.env.NEXT_PUBLIC_GPT_KEY, dangerouslyAllowBrowser: true});
+  const openai = new OpenAI({ apiKey: process.env.NEXT_PUBLIC_GPT_KEY, dangerouslyAllowBrowser: true });
 
   async function setup() {
     const completion = await openai.chat.completions.create({
       messages: [{ role: "system", content: "You are a witty, sarcastic, helpful, yet scientifically accurate assistant for a scientific researcher." }],
       model: "gpt-3.5-turbo",
     });
-    
-    updateItems([{text: "Assistant: " + completion.choices[0].message.content}])
+
+    updateItems([{ text: "Assistant: " + completion.choices[0].message.content }])
     console.log(completion.choices[0]);
     setChatLog([...chatLog, completion.choices[0].message])
   }
 
-  async function sendMessage(message:string, initialArray:any) {
+  async function sendMessage(message: string, initialArray: any) {
     const completion = await openai.chat.completions.create({
-      messages: [...chatLog, {role: "user", content: message}],
+      messages: [...chatLog, { role: "user", content: message }],
       model: "gpt-3.5-turbo",
     });
-    
-    updateItems([...initialArray, { text: "User: " + message }, {text: "Assistant: " + completion.choices[0].message.content}])
+
+    updateItems([...initialArray, { text: "User: " + message }, { text: "Assistant: " + completion.choices[0].message.content }])
     console.log(completion.choices[0]);
-    setChatLog([...chatLog, {role: "user", content: message}, completion.choices[0].message])
+    setChatLog([...chatLog, { role: "user", content: message }, completion.choices[0].message])
     console.log(items);
     console.log(chatLog);
 
@@ -83,18 +96,8 @@ export default function Example() {
 
   return (
     <>
-      {/*
-        This example requires updating your template:
-
-        ```
-        <html class="h-full bg-white">
-        <body class="h-full">
-        ```
-      */}
       <div className=''>
-        {/* Static sidebar for desktop */}
         <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-72 lg:flex-col">
-          {/* Sidebar component, swap this element with another sidebar if you like */}
           <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-4">
             <div className="flex h-16 shrink-0 items-center">
               <img
@@ -110,7 +113,7 @@ export default function Example() {
                     {navigation.map((item) => (
                       <li key={item.name}>
                         <a
-                          href={item.href}
+                          onClick={item.onclick}
                           className={classNames(
                             item.current
                               ? 'bg-gray-800 text-white'
@@ -216,18 +219,51 @@ export default function Example() {
           <div className="py-10">
             <div className="px-4 sm:px-6 lg:px-8">{
               <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex flex-col">
-                <div className="overflow-y-auto h-96 rounded-lg bg-white shadow-lg scroll-auto">
-                  <ul role="list" className="divide-y divide-gray-200">
-                    {items.map((item, id) => (
-                      <li key={id} className="px-6 py-4 m-2 rounded-xl bg-gray-100">
-                        {item.text}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                {selectedTab &&
+                  <div>
+                    <h2 className="text-2xl font-bold leading-7 mb-2 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                      Assistant
+                    </h2>
+                    <div className="overflow-y-auto h-96 rounded-lg bg-white shadow-lg scroll-auto">
+                      <ul role="list" className="divide-y divide-gray-200">
+                        {items.map((item, id) => (
+                          <li key={id} className="px-6 py-4 m-2 rounded-xl bg-gray-100">
+                            {item.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div> </div>
+                }
+
+
+                {
+                  !selectedTab &&
+                  <div>
+                    <h2 className="text-2xl font-bold leading-7 mb-2 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                      Article Search
+                    </h2>
+                  <div className="overflow-y-auto h-96 rounded-lg bg-white shadow-lg scroll-auto">
+                    <ul role="list" className="divide-y divide-gray-200">
+                      {articleList.map((item
+                      :any, id:any) => (
+                        <li key={id} className="px-6 py-4 m-4 rounded-xl bg-gray-100">
+                        <a key={id} href={item.link} >
+                          {item.title}
+                        </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  </div>
+                }
+
+
+
+
                 <div className="my-5">
-                  <label htmlFor="comment" className="block text-sm font-medium leading-6 text-gray-900">
-                    Your message
+                  <label htmlFor="comment" className="block text-md font-medium leading-6 text-gray-900">
+                    {selectedTab? "Your message" : "Query"}
                   </label>
                   <div className="mt-2 " >
                     <textarea
